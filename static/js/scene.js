@@ -1,7 +1,7 @@
 let scene = new THREE.Scene(),
     width = window.innerWidth,
     height = window.innerHeight,
-    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(80, width / height, 0.1, 1000);
 
 let loader = new THREE.OBJLoader();
 
