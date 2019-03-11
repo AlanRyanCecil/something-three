@@ -1,104 +1,67 @@
 let scene = new THREE.Scene(),
     width = window.innerWidth,
     height = window.innerHeight,
-    camera = new THREE.PerspectiveCamera(80, width / height, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000),
+    intersects;
 
-let loader = new THREE.OBJLoader();
-let gltfLoader = new THREE.GLTFLoader();
+camera.position.set(0, 1, -2);
+console.log('camera:', camera);
 
-let gltfScene, gltfCamera;
-gltfLoader.load('static/blenderFiles/exportTest.glb', function(gltf) {
-    console.log('GLTF:', gltf.cameras);
-    gltfScene = gltf.scene;
-    // scene.add(gltfScene);
-    console.log(gltfScene);
+let loader = new THREE.GLTFLoader();
+loader.load('static/blenderFiles/blenderScene.glb', function(gltf) {
+    gltf.scene.traverse(function(node) {
+        if (node instanceof THREE.Mesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+        }
+
+        if (node instanceof THREE.SpotLight) {
+            node.castShadow = true;
+            node.intensity = node.intensity * 10;
+        }
+    });
+    console.log('gltf:', gltf);
+    scene.add(gltf.scene);
+    console.log('scene:', scene);
 });
 
+let raycaster = new THREE.Raycaster(),
+    mouse = new THREE.Vector2();
 
-
-
-let raycaster = new THREE.Raycaster();
-let mouse = new THREE.Vector2();
-
-function onMouseMove(event) {
+let colorTimer = null;
+function onMouseDown(event) {
+    if (colorTimer) { return; }
+    console.log(event);
     mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
     mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    intersects = raycaster.intersectObjects(scene.children[0].children);
+    if (intersects.length) {
+        let originalColor = new THREE.Color(intersects[0].object.material.color);
+        intersects[0].object.material.color.set(0x333333);
+        colorTimer = setTimeout(function() {
+            intersects[0].object.material.color.set(originalColor);
+            colorTimer = null;
+        }, 200);
+    }
 }
-
-window.addEventListener('mousemove', onMouseMove, false);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+window.addEventListener('mousedown', onMouseDown, false);
 
 let renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(width, height);
 renderer.shadowMapEnabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setClearColor(0x110033);
+renderer.physicallyCorrectLights = true;
 renderer.gammaOutput = true;
 renderer.gammaFactor = 2.2;
-console.log(renderer);
+console.log('renderer:', renderer);
 document.body.appendChild(renderer.domElement);
-controls = new THREE.OrbitControls(camera, renderer.domElement);
 
-let ambient = new THREE.AmbientLight(0xffffff, 0.5);
-
-let point = new THREE.PointLight(0xffffff, 0.8);
-point.position.set(0, 16, 0);
-point.castShadow = true;
-point.shadow.mapSize.width = 2048;
-point.shadow.mapSize.height = 2048;
-
-let floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(32, 32),
-    new THREE.MeshPhongMaterial({color: 0xD79B33, side: THREE.DoubleSide})
-    );
-floor.receiveShadow = true;
-floor.position.y = -2;
-floor.rotation.x = degToRad(90);
-floor.rotation.z = degToRad(45);
-
-let wall = new THREE.Mesh(
-    new THREE.PlaneGeometry(5, 5),
-    new THREE.MeshPhongMaterial({color: 0x7F00FF, side: THREE.DoubleSide})
-    );
-wall.position.set(0, 2, -3);
-wall.rotation.z = degToRad(45);
-
-let box = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1.6, 1),
-    new THREE.MeshLambertMaterial({color: 0x00A8FF})
-    );
-box.position.set(0, 1.2, 0);
-box.castShadow = true;
-console.log(box);
-
-let sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(1),
-    new THREE.MeshNormalMaterial({wireframe: true})
-    );
-
-camera.position.z = 5;
+let controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, -8);
 
 let sceneArray = [
-    ambient,
-    point,
-    // floor,
-    sphere,
-    // wall,
-    // box,
 ];
 
 sceneArray.forEach(x => scene.add(x));
@@ -107,16 +70,20 @@ function animate() {
     requestAnimationFrame(animate);
 
     controls.update();
-    raycaster.setFromCamera(mouse, camera);
-
-    box.rotation.x += 0.011;
-    box.rotation.y += 0.01;
-    box.rotation.z += 0.04;
 
     renderer.render(scene, camera);
 }
 
 animate();
+
+function clickColor(mesh) {
+    let originalColor = mesh.object.material.color;
+    mesh.object.material.color.set(0x666666);
+    setTimeout(function() {
+        mesh.object.material.color.set(originalColor);
+    }, 300);
+}
+
 
 function degToRad(deg) {
     return deg * (Math.PI / 180);
