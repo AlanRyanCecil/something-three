@@ -5,17 +5,18 @@ let scene = new THREE.Scene(),
     // width = container.clientWidth,
     // height = width / 2,
     camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 300),
-    ambient = new THREE.AmbientLight(0xFFFFFF, 0.3),
+    ambient = new THREE.AmbientLight(0xECF4F7, 1),
     sceneObjects = [],
     intersects;
 
 // scene.fog = new THREE.Fog(0xE6E0D5, 5, 20);
 
-camera.position.set(0, 1, -2);
+camera.position.set(16, 16, 50);
+console.log(camera);
 
 let renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(width, height);
-renderer.setClearColor(0xE6E0D5);
+renderer.setClearColor(0xBDE6F7);
 renderer.shadowMapEnabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.physicallyCorrectLights = true;
@@ -25,26 +26,24 @@ document.body.appendChild(renderer.domElement);
 // container.appendChild(renderer.domElement);
 
 let controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 1, -8);
-controls.minPolarAngle = 1;
-controls.maxPolarAngle = 1.64;
-controls.minDistance = 4;
-controls.maxDistance = 32;
+controls.target.set(0, -5, 0);
+console.log(controls);
 
 let loader = new THREE.GLTFLoader();
-loader.load('static/blenderFiles/blenderScene.glb', function(gltf) {
+loader.load('static/blenderFiles/world.glb', function(gltf) {
     gltf.scene.traverse(function(node) {
         if (node instanceof THREE.Mesh) {
+            console.log('Mesh:', node);
             node.castShadow = true;
             node.receiveShadow = true;
             sceneObjects.push(node);
         }
         if (node instanceof THREE.DirectionalLight) {
+            console.log('light:', node);
+            node.shadow.mapSize.width = 2048;
+            node.shadow.mapSize.height = 2048;
             node.castShadow = true;
             node.intensity = node.intensity * 1;
-        }
-        if (node.name === 'floor') {
-            node.material = new THREE.ShadowMaterial({opacity: 0.6});
         }
     });
     scene.add(gltf.scene);
@@ -55,21 +54,14 @@ let raycaster = new THREE.Raycaster(),
 
 let colorTimer = null;
 function onMouseDown(event) {
-;    if (colorTimer) { return; }
+    if (colorTimer) { return; }
     mouse.x = (event.offsetX / width) * 2 - 1;
     mouse.y = - (event.offsetY / height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
     intersects = raycaster.intersectObjects(sceneObjects);
     if (intersects.length) {
-        animateVector3(intersects[0].object.position, new THREE.Vector3(120, 12, 12));
-
-        let originalColor = new THREE.Color(intersects[0].object.material.color);
-        intersects[0].object.material.color.set(Math.random() * 0xFFFFFF);
-        colorTimer = setTimeout(function() {
-            intersects[0].object.material.color.set(originalColor);
-            colorTimer = null;
-        }, 200);
+        // clickColor(intersects[0]);
     }
 }
 window.addEventListener('mousedown', onMouseDown, false);
@@ -91,12 +83,12 @@ function animate() {
 animate();
 
 function clickColor(mesh) {
-    let originalColor = mesh.object.material.color;
-    mesh.object.material.color.set(0xFFFFFF);
-    let colorChange = new TWEEN.Tween()
-    setTimeout(function() {
+    let originalColor = new THREE.Color(mesh.object.material.color);
+    mesh.object.material.color.set(Math.random() * 0xFFFFFF);
+    colorTimer = setTimeout(function() {
         mesh.object.material.color.set(originalColor);
-    }, 300);
+        colorTimer = null;
+    }, 200);
 }
 
 function animateVector3(vectorToAnimate, target, options){
