@@ -1,13 +1,17 @@
 let scene = new THREE.Scene(),
     width = window.innerWidth,
     height = window.innerHeight,
-    camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000),
+    // container = document.getElementById('world'),
+    // width = container.clientWidth,
+    // height = width / 2,
+    camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 300),
+    ambient = new THREE.AmbientLight(0xFFFFFF, 0.3),
     sceneObjects = [],
     intersects;
 
+// scene.fog = new THREE.Fog(0xE6E0D5, 5, 20);
 
 camera.position.set(0, 1, -2);
-console.log('camera:', camera);
 
 let renderer = new THREE.WebGLRenderer({antialias: true});
 renderer.setSize(width, height);
@@ -17,16 +21,19 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.physicallyCorrectLights = true;
 renderer.gammaOutput = true;
 renderer.gammaFactor = 2.2;
-console.log('renderer:', renderer);
 document.body.appendChild(renderer.domElement);
+// container.appendChild(renderer.domElement);
 
 let controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 1, -8);
+controls.minPolarAngle = 1;
+controls.maxPolarAngle = 1.64;
+controls.minDistance = 4;
+controls.maxDistance = 32;
 
 let loader = new THREE.GLTFLoader();
 loader.load('static/blenderFiles/blenderScene.glb', function(gltf) {
     gltf.scene.traverse(function(node) {
-        console.log('type:', node.name);
         if (node instanceof THREE.Mesh) {
             node.castShadow = true;
             node.receiveShadow = true;
@@ -37,12 +44,10 @@ loader.load('static/blenderFiles/blenderScene.glb', function(gltf) {
             node.intensity = node.intensity * 1;
         }
         if (node.name === 'floor') {
-            node.material = new THREE.ShadowMaterial();
+            node.material = new THREE.ShadowMaterial({opacity: 0.6});
         }
     });
-    console.log('gltf:', gltf);
     scene.add(gltf.scene);
-    console.log('scene:', scene);
 });
 
 let raycaster = new THREE.Raycaster(),
@@ -50,10 +55,9 @@ let raycaster = new THREE.Raycaster(),
 
 let colorTimer = null;
 function onMouseDown(event) {
-    if (colorTimer) { return; }
-    console.log(event);
-    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+;    if (colorTimer) { return; }
+    mouse.x = (event.offsetX / width) * 2 - 1;
+    mouse.y = - (event.offsetY / height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
     intersects = raycaster.intersectObjects(sceneObjects);
@@ -61,7 +65,7 @@ function onMouseDown(event) {
         animateVector3(intersects[0].object.position, new THREE.Vector3(120, 12, 12));
 
         let originalColor = new THREE.Color(intersects[0].object.material.color);
-        intersects[0].object.material.color.set(0x333333);
+        intersects[0].object.material.color.set(Math.random() * 0xFFFFFF);
         colorTimer = setTimeout(function() {
             intersects[0].object.material.color.set(originalColor);
             colorTimer = null;
@@ -71,6 +75,7 @@ function onMouseDown(event) {
 window.addEventListener('mousedown', onMouseDown, false);
 
 let sceneArray = [
+    ambient,
 ];
 
 sceneArray.forEach(x => scene.add(x));

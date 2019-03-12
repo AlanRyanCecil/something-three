@@ -6,7 +6,6 @@
  * See https://github.com/tweenjs/tween.js/graphs/contributors for the full list of contributors.
  * Thank you all, you're awesome!
  */
-console.log('TWEEN is Loaded');
 
 
 var _Group = function () {
